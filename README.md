@@ -92,10 +92,6 @@ require('phprefactoring').setup({
   refactor = {
     auto_format = true,          -- Auto-format after refactoring
   },
-
-
-
-
 })
 ```
 
