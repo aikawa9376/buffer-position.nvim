@@ -2,6 +2,10 @@
 
 A comprehensive PHP refactoring plugin for Neovim that brings PHPStorm-like refactoring capabilities to your favorite editor.
 
+## Important
+
+This plugin is still in development, please report any issues you find.
+
 ## ✨ Features
 
 This plugin provides essential PHP refactoring operations:
