@@ -192,6 +192,23 @@ function M.analyze_code_block(code_block, start_pos, end_pos)
         '%$([%w_]+)->', -- Object property: $var->prop
         '%$([%w_]+)::', -- Static access: $var::method
     }
+    
+    -- Also find variables captured in 'use' clauses of closures/callbacks
+    local use_pattern = 'use%s*%([^%)]*%$([%w_]+)[^%)]*%)'
+    for var in code_block:gmatch(use_pattern) do
+        if var ~= 'this' then
+            analysis.used_variables[var] = true
+        end
+    end
+    
+    -- More comprehensive 'use' pattern to handle multiple variables
+    for use_clause in code_block:gmatch('use%s*%([^%)]*%)') do
+        for var in use_clause:gmatch('%$([%w_]+)') do
+            if var ~= 'this' then
+                analysis.used_variables[var] = true
+            end
+        end
+    end
 
     for _, pattern in ipairs(variable_patterns) do
         for var in code_block:gmatch(pattern) do
@@ -212,7 +229,16 @@ function M.analyze_code_block(code_block, start_pos, end_pos)
         'while%s*%(%s*%$([%w_]+)%s*=',                               -- while with assignment
         'if%s*%(%s*%$([%w_]+)%s*=',                                  -- if with assignment
         'catch%s*%([^%)]*%s+%$([%w_]+)%s*%)',                        -- catch block: catch(Exception $var)
+        'function%s*%([^%)]*%$([%w_]+)[^%)]*%)',                     -- function parameters: function($param)
     }
+    
+    -- Handle callback/closure parameter definitions separately
+    -- These variables are defined within their callback scope, not the outer scope
+    for callback_params in code_block:gmatch('function%s*%([^%)]*%)') do
+        for var in callback_params:gmatch('%$([%w_]+)') do
+            analysis.defined_variables[var] = true
+        end
+    end
 
     for _, pattern in ipairs(definition_patterns) do
         for var in code_block:gmatch(pattern) do
@@ -224,10 +250,20 @@ function M.analyze_code_block(code_block, start_pos, end_pos)
     local current_function_params = M.get_current_function_parameters()
 
     -- Variables that are used but not defined are potential parameters
+    -- Special handling: variables in 'use' clauses should always be parameters
+    local use_variables = {}
+    for use_clause in code_block:gmatch('use%s*%([^%)]*%)') do
+        for var in use_clause:gmatch('%$([%w_]+)') do
+            if var ~= 'this' then
+                use_variables[var] = true
+            end
+        end
+    end
+    
     for var, _ in pairs(analysis.used_variables) do
-        if not analysis.defined_variables[var] then
+        if not analysis.defined_variables[var] or use_variables[var] then
             -- Add as parameter if it's used but not defined in the extracted code
-            -- This includes existing function parameters that need to be passed to the extracted method
+            -- OR if it's captured in a 'use' clause (which means it comes from outer scope)
             local param_type = M.infer_parameter_type(var, code_block)
             table.insert(analysis.parameters, { name = var, type = param_type })
         end
