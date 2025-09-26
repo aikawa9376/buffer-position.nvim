@@ -66,4 +66,19 @@ function M.pull_members_up()
     members.pull_up()
 end
 
+function M.rename_variable()
+    local rename = require('phprefactoring.refactors.rename')
+    rename.variable()
+end
+
+function M.rename_method()
+    local rename = require('phprefactoring.refactors.rename')
+    rename.method()
+end
+
+function M.rename_class()
+    local rename = require('phprefactoring.refactors.rename')
+    rename.class()
+end
+
 return M

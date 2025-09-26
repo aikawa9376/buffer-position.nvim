@@ -21,6 +21,9 @@ This plugin provides essential PHP refactoring operations:
 - **Introduce Parameter** - Extract values into function parameters
 - **Change Signature** - Modify function/method signatures safely
 - **Pull Members Up** - Move members to parent classes
+- **Rename Variable** - Rename variables within their scope
+- **Rename Method** - Rename methods and their calls
+- **Rename Class** - Rename classes and their references
 
 ### 🧠 Smart Analysis
 
@@ -111,6 +114,9 @@ All refactoring operations are available as commands:
 :PHPIntroduceParameter    " Introduce parameter
 :PHPChangeSignature       " Change method signature
 :PHPPullMembersUp         " Pull members to parent class
+:PHPRenameVariable        " Rename variable in scope
+:PHPRenameMethod          " Rename method and calls
+:PHPRenameClass           " Rename class and references
 ```
 
 ### Custom Keymaps
@@ -128,6 +134,9 @@ vim.keymap.set('n', '<leader>if', '<cmd>PHPIntroduceField<cr>', { desc = 'Introd
 vim.keymap.set('n', '<leader>ip', '<cmd>PHPIntroduceParameter<cr>', { desc = 'Introduce parameter' })
 vim.keymap.set('n', '<leader>cs', '<cmd>PHPChangeSignature<cr>', { desc = 'Change signature' })
 vim.keymap.set('n', '<leader>pm', '<cmd>PHPPullMembersUp<cr>', { desc = 'Pull members up' })
+vim.keymap.set('n', '<leader>rn', '<cmd>PHPRenameVariable<cr>', { desc = 'Rename variable' })
+vim.keymap.set('n', '<leader>rp', '<cmd>PHPRenameMethod<cr>', { desc = 'Rename method' })
+vim.keymap.set('n', '<leader>rt', '<cmd>PHPRenameClass<cr>', { desc = 'Rename class' })
 ```
 
 **Note:** These keymaps will work in PHP files. You can customize them to your preference.
@@ -220,6 +229,65 @@ public function processUser($userId, $data) { /* ... */ }
 // Enter new signature: processUser($userId, $data, $options = [])
 public function processUser($userId, $data, $options = []) { /* ... */ }
 ```
+
+### Rename Variable
+
+```php
+// Before (cursor on variable)
+$userName = $request->get('name');
+if (strlen($userName) > 0) {
+    echo "Hello " . $userName;
+}
+
+// After running :PHPRenameVariable and entering "fullName"
+$fullName = $request->get('name');
+if (strlen($fullName) > 0) {
+    echo "Hello " . $fullName;
+}
+```
+
+### Rename Method
+
+```php
+// Before (cursor on method name)
+class UserService {
+    public function processUser($data) { /* ... */ }
+
+    public function handleRequest() {
+        $this->processUser($data);
+    }
+}
+
+// After running :PHPRenameMethod and entering "createUser"
+class UserService {
+    public function createUser($data) { /* ... */ }
+
+    public function handleRequest() {
+        $this->createUser($data);
+    }
+}
+```
+
+### Rename Class
+
+```php
+// Before (cursor on class name in UserService.php)
+class UserService {
+    // implementation
+}
+
+$service = new UserService();
+
+// After running :PHPRenameClass and entering "UserManager"
+// File is automatically renamed from UserService.php to UserManager.php
+class UserManager {
+    // implementation
+}
+
+$service = new UserManager();
+```
+
+**Note**: When renaming a class, if the file name matches the class name (case-insensitive), the file will be automatically renamed to match the new class name.
 
 ## 🏗️ Architecture
 
