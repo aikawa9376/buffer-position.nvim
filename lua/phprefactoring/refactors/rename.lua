@@ -702,68 +702,8 @@ function M.find_class_occurrences(class_name)
     local bufnr = vim.api.nvim_get_current_buf()
     local occurrences = {}
 
-    -- Try to use TreeSitter for more accurate class detection
-    if parser.has_treesitter then
-        local ts_parser = vim.treesitter.get_parser(bufnr, 'php')
-        if ts_parser then
-            local tree = ts_parser:parse()[1]
-            if tree then
-                local root = tree:root()
-
-                -- Query for class-related nodes in the entire file
-                local function traverse_node(node)
-                    -- Check if this is a class-related node
-                    local node_type = node:type()
-                    if node_type == 'name' and node:parent() then
-                        local parent_type = node:parent():type()
-                        -- Look for class declarations, instantiations, static calls, etc.
-                        if parent_type == 'class_declaration' or
-                           parent_type == 'object_creation_expression' or
-                           parent_type == 'scoped_call_expression' or
-                           parent_type == 'class_constant_access_expression' or
-                           parent_type == 'instanceof_expression' or
-                           parent_type == 'base_clause' or  -- extends
-                           parent_type == 'class_interface_clause' then  -- implements
-                            local node_text = parser.get_node_text(node)
-                            if node_text == class_name then
-                                local start_row, start_col, end_row, end_col = node:range()
-                                table.insert(occurrences, {
-                                    line = start_row,
-                                    col = start_col,
-                                    text = class_name
-                                })
-                            end
-                        end
-                    elseif node_type == 'qualified_name' then
-                        -- Handle namespaced class names
-                        local node_text = parser.get_node_text(node)
-                        if node_text:match(class_name .. '$') then  -- Ends with our class name
-                            local start_row, start_col, end_row, end_col = node:range()
-                            -- Find the exact position of the class name within the qualified name
-                            local class_start = node_text:find(class_name .. '$')
-                            if class_start then
-                                table.insert(occurrences, {
-                                    line = start_row,
-                                    col = start_col + class_start - 1,
-                                    text = class_name
-                                })
-                            end
-                        end
-                    end
-
-                    -- Recursively check children
-                    for child in node:iter_children() do
-                        traverse_node(child)
-                    end
-                end
-
-                traverse_node(root)
-                return occurrences
-            end
-        end
-    end
-
-    -- Fallback to regex-based approach if TreeSitter is not available
+    -- Always use regex-based approach for class renaming as it's more reliable
+    -- TreeSitter node types for PHP class usage can be complex and vary
     return M.find_class_occurrences_regex(class_name)
 end
 
@@ -778,25 +718,27 @@ function M.find_class_occurrences_regex(class_name)
     for i, line in ipairs(lines) do
         local line_num = i - 1
 
-        -- Remove string literals and comments for safer parsing
-        local cleaned_line = M.remove_string_literals_and_comments(line)
-
+        -- Search directly in the original line, but validate context
         local start_col = 1
 
         while true do
-            local col = cleaned_line:find(escaped_class, start_col)
+            local col = line:find(escaped_class, start_col)
             if not col then
                 break
             end
 
-            -- Enhanced class occurrence validation
-            if M.is_valid_class_occurrence(cleaned_line, col, class_name) then
-                -- Get the actual position in the original line
-                local actual_col = M.find_actual_position_in_original_line(line, cleaned_line, col)
-                if actual_col then
+            -- Check if this occurrence is in a comment or string
+            local before_text = line:sub(1, col - 1)
+            local is_in_comment = before_text:match('//') or before_text:match('/%*')
+            local is_in_string = (before_text:gsub('\\"', ''):gsub('"[^"]*$', '') ~= before_text:gsub('\\"', '')) or
+                                 (before_text:gsub("\\'", ""):gsub("'[^']*$", '') ~= before_text:gsub("\\'", ""))
+
+            if not is_in_comment and not is_in_string then
+                -- Enhanced class occurrence validation using original line
+                if M.is_valid_class_occurrence(line, col, class_name) then
                     table.insert(occurrences, {
                         line = line_num,
-                        col = actual_col - 1, -- Convert to 0-based
+                        col = col - 1, -- Convert to 0-based
                         text = class_name
                     })
                 end
