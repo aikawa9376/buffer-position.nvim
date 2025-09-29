@@ -23,7 +23,10 @@ local function create_commands()
         'PHPIntroduceField',
         'PHPIntroduceParameter',
         'PHPChangeSignature',
-        'PHPPullMembersUp'
+        'PHPPullMembersUp',
+        'PHPRenameVariable',
+        'PHPRenameMethod',
+        'PHPRenameClass'
     }
 
     -- Command mapping to actual method names
@@ -36,7 +39,10 @@ local function create_commands()
         PHPIntroduceField = 'introduce_field',
         PHPIntroduceParameter = 'introduce_parameter',
         PHPChangeSignature = 'change_signature',
-        PHPPullMembersUp = 'pull_members_up'
+        PHPPullMembersUp = 'pull_members_up',
+        PHPRenameVariable = 'rename_variable',
+        PHPRenameMethod = 'rename_method',
+        PHPRenameClass = 'rename_class'
     }
 
     for _, cmd in ipairs(commands) do
