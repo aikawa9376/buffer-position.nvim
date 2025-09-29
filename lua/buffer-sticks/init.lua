@@ -8,7 +8,7 @@ local M = {}
 ---@field win number Window handle for the floating window
 ---@field buf number Buffer handle for the display buffer
 ---@field visible boolean Whether the buffer sticks are currently visible
----@field timer table Timer object for hiding the window
+---@field timer number|nil Timer ID for hiding the window
 local state = {
 	win = -1,
 	buf = -1,
@@ -151,7 +151,7 @@ local function hide()
 		state.win = -1
 	end
 	if state.timer then
-		state.timer:stop()
+		vim.fn.timer_stop(state.timer)
 		state.timer = nil
 	end
 	state.visible = false
@@ -170,7 +170,7 @@ local function show()
 
 	-- Stop any existing timer
 	if state.timer then
-		state.timer:stop()
+		vim.fn.timer_stop(state.timer)
 	end
 
 	-- Start a new timer to hide the window
