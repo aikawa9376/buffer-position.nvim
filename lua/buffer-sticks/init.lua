@@ -27,23 +27,30 @@ local state = {
 ---@field x number Horizontal offset from default position
 ---@field y number Vertical offset from default position
 
+---@class BufferSticksPadding
+---@field vertical number Vertical padding for the window
+
 ---@class BufferSticksConfig
 ---@field position "left"|"right" Position of the buffer sticks on screen
 ---@field width number Width of the floating window
 ---@field offset BufferSticksOffset Position offset for fine-tuning
+---@field padding BufferSticksPadding Padding for the window
 ---@field active_char string Character to display for the cursor position
 ---@field inactive_char string Character to display for the track
 ---@field transparent boolean Whether the background should be transparent
+---@field line_spacing number Number of blank lines between characters
 ---@field winblend? number Window blend/transparency level (0-100, overrides transparent)
 ---@field hide_delay number Delay in milliseconds before hiding the indicator
 ---@field highlights table<string, BufferSticksHighlights> Highlight groups for active/inactive states
 local config = {
 	position = "right", -- "left" or "right"
-	width = 1,
+	width = 2,
 	offset = { x = 0, y = 0 },
-	active_char = "█",
-	inactive_char = "-",
+	padding = { vertical = 1 },
+	active_char = "──",
+	inactive_char = " ─",
 	transparent = true,
+	line_spacing = 1, -- number of blank lines between characters
 	hide_delay = 1000, -- ms
 	highlights = {
 		active = { fg = "#ffffff" },
@@ -58,12 +65,13 @@ local config = {
 ---Create and configure the floating window for buffer sticks
 ---@return WindowInfo window_info Information about the created window and buffer
 local function create_floating_window()
-	local height = vim.o.lines
+	local v_padding = (config.padding and config.padding.vertical) or 0
+	local height = vim.o.lines - (v_padding * 2)
 	local width = config.width
 
 	-- Position based on config
 	local col = config.position == "right" and vim.o.columns - width + config.offset.x or 0 + config.offset.x
-	local row = 0 + config.offset.y
+	local row = v_padding + config.offset.y
 
 	-- Create buffer if needed
 	if not vim.api.nvim_buf_is_valid(state.buf) then
@@ -122,16 +130,26 @@ local function render_position()
 	end
 
 	local current_line = vim.api.nvim_win_get_cursor(0)[1]
-	local height = vim.api.nvim_win_get_height(state.win)
+	local win_height = vim.api.nvim_win_get_height(state.win)
+	local line_spacing = config.line_spacing or 0
+	local effective_height = math.floor(win_height / (1 + line_spacing))
+
+	if effective_height <= 0 then
+		return
+	end
+
 	local percentage = (current_line - 1) / (total_lines - 1)
-	local thumb_pos = math.floor(percentage * (height - 1))
+	local thumb_pos = math.floor(percentage * (effective_height - 1))
 
 	local lines = {}
-	for i = 1, height do
+	for i = 1, effective_height do
 		if i - 1 == thumb_pos then
 			table.insert(lines, config.active_char)
 		else
 			table.insert(lines, config.inactive_char)
+		end
+		for _ = 1, line_spacing do
+			table.insert(lines, "")
 		end
 	end
 
@@ -139,9 +157,10 @@ local function render_position()
 
 	-- Set highlights
 	vim.api.nvim_buf_clear_namespace(state.buf, -1, 0, -1)
-	for i = 1, height do
+	for i = 1, effective_height do
 		local hl_group = (i - 1 == thumb_pos) and "BufferSticksActive" or "BufferSticksInactive"
-		vim.api.nvim_buf_add_highlight(state.buf, -1, hl_group, i - 1, 0, -1)
+		local line_index = (i - 1) * (1 + line_spacing)
+		vim.api.nvim_buf_add_highlight(state.buf, -1, hl_group, line_index, 0, -1)
 	end
 end
 
