@@ -2,7 +2,6 @@
 -- Integrates with Treesitter for accurate PHP code analysis
 
 local config = require('phprefactoring.config')
-local ts_utils = require('nvim-treesitter.ts_utils')
 
 local M = {}
 
