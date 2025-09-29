@@ -1,10 +1,10 @@
 -- luacheck: globals vim
 
----@class BufferSticks
+---@class BufferPosition
 ---@field setup function Setup the buffer sticks plugin
 local M = {}
 
----@class BufferSticksState
+---@class BufferPositionState
 ---@field win number Window handle for the floating window
 ---@field buf number Buffer handle for the display buffer
 ---@field visible boolean Whether the buffer sticks are currently visible
@@ -18,21 +18,21 @@ local state = {
 	show_timer = nil,
 }
 
----@class BufferSticksHighlights
+---@class BufferPositionHighlights
 ---@field fg? string Foreground color (hex color or highlight group name)
 ---@field bg? string Background color (hex color or highlight group name)
 ---@field bold? boolean Bold text
 ---@field italic? boolean Italic text
 ---@field link? string Link to existing highlight group (alternative to defining colors)
 
----@class BufferSticksOffset
+---@class BufferPositionOffset
 ---@field x number Horizontal offset from default position
 ---@field y number Vertical offset from default position
 
----@class BufferSticksConfig
+---@class BufferPositionConfig
 ---@field position "left"|"right" Position of the buffer sticks on screen
 ---@field width number Width of the floating window
----@field offset BufferSticksOffset Position offset for fine-tuning
+---@field offset BufferPositionOffset Position offset for fine-tuning
 ---@field height_percentage number Height of the window as a percentage of screen height (0-1)
 ---@field active_char string Character to display for the cursor position
 ---@field inactive_char string Character to display for the track
@@ -42,7 +42,7 @@ local state = {
 ---@field show_delay number Delay in milliseconds before showing the indicator
 ---@field hide_delay number Delay in milliseconds before hiding the indicator (if auto_hide is true)
 ---@field auto_hide boolean Whether to automatically hide the indicator after hide_delay
----@field highlights table<string, BufferSticksHighlights> Highlight groups for active/inactive states
+---@field highlights table<string, BufferPositionHighlights> Highlight groups for active/inactive states
 local config = {
 	position = "right", -- "left" or "right"
 	width = 2,
@@ -113,7 +113,7 @@ local function create_floating_window()
 
 	-- Set window background based on transparency
 	if not config.winblend and not config.transparent then
-		vim.api.nvim_win_set_option(state.win, "winhl", "Normal:BufferSticksBackground")
+		vim.api.nvim_win_set_option(state.win, "winhl", "Normal:BufferPositionBackground")
 	else
 		vim.api.nvim_win_set_option(state.win, "winhl", "Normal:NONE")
 	end
@@ -161,7 +161,7 @@ local function render_position()
 	-- Set highlights
 	vim.api.nvim_buf_clear_namespace(state.buf, -1, 0, -1)
 	for i = 1, effective_height do
-		local hl_group = (i - 1 == thumb_pos) and "BufferSticksActive" or "BufferSticksInactive"
+		local hl_group = (i - 1 == thumb_pos) and "BufferPositionActive" or "BufferPositionInactive"
 		local line_index = (i - 1) * (1 + line_spacing)
 		vim.api.nvim_buf_add_highlight(state.buf, -1, hl_group, line_index, 0, -1)
 	end
@@ -212,7 +212,7 @@ local function show()
 end
 
 ---Setup the buffer sticks plugin with user configuration
----@param opts? BufferSticksConfig User configuration options to override defaults
+---@param opts? BufferPositionConfig User configuration options to override defaults
 function M.setup(opts)
 	opts = opts or {}
 	config = vim.tbl_deep_extend("force", config, opts)
@@ -222,33 +222,33 @@ function M.setup(opts)
 		local is_transparent = config.winblend or config.transparent
 
 		if config.highlights.active.link then
-			vim.api.nvim_set_hl(0, "BufferSticksActive", { link = config.highlights.active.link })
+			vim.api.nvim_set_hl(0, "BufferPositionActive", { link = config.highlights.active.link })
 		else
 			local active_hl = vim.deepcopy(config.highlights.active)
 			if is_transparent then
-				active_hl.bg = nil -- Remove background for transparency
+				active_hl.bg = "NONE" -- Remove background for transparency
 			end
-			vim.api.nvim_set_hl(0, "BufferSticksActive", active_hl)
+			vim.api.nvim_set_hl(0, "BufferPositionActive", active_hl)
 		end
 
 		if config.highlights.inactive.link then
-			vim.api.nvim_set_hl(0, "BufferSticksInactive", { link = config.highlights.inactive.link })
+			vim.api.nvim_set_hl(0, "BufferPositionInactive", { link = config.highlights.inactive.link })
 		else
 			local inactive_hl = vim.deepcopy(config.highlights.inactive)
 			if is_transparent then
-				inactive_hl.bg = nil -- Remove background for transparency
+				inactive_hl.bg = "NONE" -- Remove background for transparency
 			end
-			vim.api.nvim_set_hl(0, "BufferSticksInactive", inactive_hl)
+			vim.api.nvim_set_hl(0, "BufferPositionInactive", inactive_hl)
 		end
 
 		if not is_transparent then
-			vim.api.nvim_set_hl(0, "BufferSticksBackground", { bg = "#1e1e1e" })
+			vim.api.nvim_set_hl(0, "BufferPositionBackground", { bg = "#1e1e1e" })
 		end
 	end
 
 	setup_highlights()
 
-	local augroup = vim.api.nvim_create_augroup("BufferSticks", { clear = true })
+	local augroup = vim.api.nvim_create_augroup("BufferPosition", { clear = true })
 
 	-- Delayed show on cursor hold
 	vim.api.nvim_create_autocmd({ "CursorHold" }, {
