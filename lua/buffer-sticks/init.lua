@@ -42,12 +42,12 @@ local config = {
 	width = 1,
 	offset = { x = 0, y = 0 },
 	active_char = "█",
-	inactive_char = "│",
+	inactive_char = "-",
 	transparent = true,
 	hide_delay = 1000, -- ms
 	highlights = {
-		active = { fg = "#ffffff", bold = true },
-		inactive = { fg = "#666666" },
+		active = { fg = "#ffffff" },
+		inactive = { fg = "#505050" },
 	},
 }
 
