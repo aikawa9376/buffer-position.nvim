@@ -83,6 +83,10 @@ The plugin comes with the following default configuration. You can override any 
 -   `hide_delay` (`number`): Delay in milliseconds before hiding the indicator (only if `auto_hide` is `true`).
 -   `highlights` (`table`): Configure the highlight groups for `active` and `inactive` states. You can set `fg`, `bg`, `bold`, `italic`, or `link` to an existing highlight group.
 
+## Acknowledgements
+
+This plugin is heavily inspired by [ahkohd/buffer-sticks.nvim](https://github.com/ahkohd/buffer-sticks.nvim).
+
 ## License
 
 This plugin is licensed under the [MIT License](./LICENSE).
