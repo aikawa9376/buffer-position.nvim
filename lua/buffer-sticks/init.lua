@@ -8,12 +8,14 @@ local M = {}
 ---@field win number Window handle for the floating window
 ---@field buf number Buffer handle for the display buffer
 ---@field visible boolean Whether the buffer sticks are currently visible
----@field timer number|nil Timer ID for hiding the window
+---@field hide_timer number|nil Timer ID for hiding the window
+---@field show_timer number|nil Timer ID for showing the window
 local state = {
 	win = -1,
 	buf = -1,
 	visible = false,
-	timer = nil,
+	hide_timer = nil,
+	show_timer = nil,
 }
 
 ---@class BufferSticksHighlights
@@ -27,31 +29,32 @@ local state = {
 ---@field x number Horizontal offset from default position
 ---@field y number Vertical offset from default position
 
----@class BufferSticksPadding
----@field vertical number Vertical padding for the window
-
 ---@class BufferSticksConfig
 ---@field position "left"|"right" Position of the buffer sticks on screen
 ---@field width number Width of the floating window
 ---@field offset BufferSticksOffset Position offset for fine-tuning
----@field padding BufferSticksPadding Padding for the window
+---@field height_percentage number Height of the window as a percentage of screen height (0-1)
 ---@field active_char string Character to display for the cursor position
 ---@field inactive_char string Character to display for the track
 ---@field transparent boolean Whether the background should be transparent
 ---@field line_spacing number Number of blank lines between characters
 ---@field winblend? number Window blend/transparency level (0-100, overrides transparent)
----@field hide_delay number Delay in milliseconds before hiding the indicator
+---@field show_delay number Delay in milliseconds before showing the indicator
+---@field hide_delay number Delay in milliseconds before hiding the indicator (if auto_hide is true)
+---@field auto_hide boolean Whether to automatically hide the indicator after hide_delay
 ---@field highlights table<string, BufferSticksHighlights> Highlight groups for active/inactive states
 local config = {
 	position = "right", -- "left" or "right"
 	width = 2,
-	offset = { x = 0, y = 0 },
-	padding = { vertical = 1 },
+	offset = { x = -1, y = 0 },
+	height_percentage = 0.8,
 	active_char = "──",
 	inactive_char = " ─",
 	transparent = true,
 	line_spacing = 1, -- number of blank lines between characters
+	show_delay = 1000,
 	hide_delay = 1000, -- ms
+	auto_hide = false,
 	highlights = {
 		active = { fg = "#ffffff" },
 		inactive = { fg = "#505050" },
@@ -65,13 +68,13 @@ local config = {
 ---Create and configure the floating window for buffer sticks
 ---@return WindowInfo window_info Information about the created window and buffer
 local function create_floating_window()
-	local v_padding = (config.padding and config.padding.vertical) or 0
-	local height = vim.o.lines - (v_padding * 2)
+	local height = math.floor(vim.o.lines * (config.height_percentage or 0.8))
 	local width = config.width
+	local row = math.floor((vim.o.lines - height) / 2)
 
 	-- Position based on config
 	local col = config.position == "right" and vim.o.columns - width + config.offset.x or 0 + config.offset.x
-	local row = v_padding + config.offset.y
+	row = row + config.offset.y -- Allow user to offset the centered position
 
 	-- Create buffer if needed
 	if not vim.api.nvim_buf_is_valid(state.buf) then
@@ -169,9 +172,13 @@ local function hide()
 		vim.api.nvim_win_close(state.win, true)
 		state.win = -1
 	end
-	if state.timer then
-		vim.fn.timer_stop(state.timer)
-		state.timer = nil
+	if state.hide_timer then
+		vim.fn.timer_stop(state.hide_timer)
+		state.hide_timer = nil
+	end
+	if state.show_timer then -- Also clear show_timer just in case
+		vim.fn.timer_stop(state.show_timer)
+		state.show_timer = nil
 	end
 	state.visible = false
 end
@@ -187,15 +194,17 @@ local function show()
 	render_position()
 	state.visible = true
 
-	-- Stop any existing timer
-	if state.timer then
-		vim.fn.timer_stop(state.timer)
+	-- Stop any existing hide timer
+	if state.hide_timer then
+		vim.fn.timer_stop(state.hide_timer)
 	end
 
-	-- Start a new timer to hide the window
-	state.timer = vim.fn.timer_start(config.hide_delay, function()
-		vim.schedule(hide)
-	end)
+	-- Start a new timer to hide the window if auto_hide is on
+	if config.auto_hide then
+		state.hide_timer = vim.fn.timer_start(config.hide_delay, function()
+			vim.schedule(hide)
+		end)
+	end
 end
 
 ---Setup the buffer sticks plugin with user configuration
@@ -237,20 +246,35 @@ function M.setup(opts)
 
 	local augroup = vim.api.nvim_create_augroup("BufferSticks", { clear = true })
 
-	-- Show on cursor hold
+	-- Delayed show on cursor hold
 	vim.api.nvim_create_autocmd({ "CursorHold" }, {
 		group = augroup,
 		pattern = "*",
 		callback = function()
-			vim.schedule(show)
+			if state.visible then
+				return
+			end
+			-- Cancel any pending show timer
+			if state.show_timer then
+				vim.fn.timer_stop(state.show_timer)
+			end
+			state.show_timer = vim.fn.timer_start(config.show_delay, function()
+				vim.schedule(show)
+			end)
 		end,
 	})
 
-	-- Hide on cursor move
+	-- Hide on cursor move, and cancel pending show
 	vim.api.nvim_create_autocmd({ "CursorMoved" }, {
 		group = augroup,
 		pattern = "*",
 		callback = function()
+			-- Cancel any pending show timer
+			if state.show_timer then
+				vim.fn.timer_stop(state.show_timer)
+				state.show_timer = nil
+			end
+			-- Hide if visible
 			if state.visible then
 				vim.schedule(hide)
 			end
@@ -273,7 +297,7 @@ function M.setup(opts)
 				vim.schedule(function()
 					hide()
 					show()
-				end)
+			end)
 			end
 		end,
 	})
