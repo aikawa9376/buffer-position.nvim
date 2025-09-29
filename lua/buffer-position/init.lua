@@ -80,7 +80,7 @@ local function create_floating_window()
 	if not vim.api.nvim_buf_is_valid(state.buf) then
 		state.buf = vim.api.nvim_create_buf(false, true)
 		vim.bo[state.buf].bufhidden = "wipe"
-		vim.bo[state.buf].filetype = "buffersticks"
+		vim.bo[state.buf].filetype = "bufferposition"
 	end
 
 	-- Create window
@@ -231,10 +231,10 @@ function M.setup(opts)
 			vim.api.nvim_set_hl(0, "BufferPositionActive", active_hl)
 		end
 
+		local inactive_hl = vim.deepcopy(config.highlights.inactive)
 		if config.highlights.inactive.link then
 			vim.api.nvim_set_hl(0, "BufferPositionInactive", { link = config.highlights.inactive.link })
 		else
-			local inactive_hl = vim.deepcopy(config.highlights.inactive)
 			if is_transparent then
 				inactive_hl.bg = "NONE" -- Remove background for transparency
 			end
@@ -242,7 +242,7 @@ function M.setup(opts)
 		end
 
 		if not is_transparent then
-			vim.api.nvim_set_hl(0, "BufferPositionBackground", { bg = "#1e1e1e" })
+			vim.api.nvim_set_hl(0, "BufferPositionBackground", inactive_hl)
 		end
 	end
 
