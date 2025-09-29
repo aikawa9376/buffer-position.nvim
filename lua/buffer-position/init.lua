@@ -185,8 +185,12 @@ end
 
 ---Show the buffer sticks floating window
 local function show()
+	local total_lines = vim.api.nvim_buf_line_count(0)
+	local window_height = vim.api.nvim_win_get_height(0)
+
 	-- Don't show for non-buflisted buffers or tiny buffers
-	if not vim.bo.buflisted or vim.api.nvim_buf_line_count(0) <= 1 then
+	-- Also, don't show if the entire buffer is visible
+	if total_lines <= window_height or not vim.bo.buflisted or total_lines <= 1 then
 		return
 	end
 
