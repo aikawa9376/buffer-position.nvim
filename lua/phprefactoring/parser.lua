@@ -18,7 +18,8 @@ function M.setup()
     -- Check if treesitter PHP parser is available
     local has_ts, _ = pcall(require, 'nvim-treesitter.parsers')
     if has_ts then
-        local parser_config = require('nvim-treesitter.parsers').get_parser_configs()
+        local parsers = require('nvim-treesitter.parsers')
+        local parser_config = parsers.get_parser_configs and parsers.get_parser_configs() or parsers
         M.has_treesitter = parser_config.php ~= nil
     else
         M.has_treesitter = false
