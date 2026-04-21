@@ -68,12 +68,22 @@ local config = {
 ---Create and configure the floating window for buffer sticks
 ---@return WindowInfo window_info Information about the created window and buffer
 local function create_floating_window()
-	local height = math.floor(vim.o.lines * (config.height_percentage or 0.8))
-	local width = config.width
-	local row = math.floor((vim.o.lines - height) / 2)
+	-- Anchor the floating window to the current window so it appears at its right/left edge
+	local cur_win = vim.api.nvim_get_current_win()
+	local win_lines = vim.api.nvim_win_get_height(cur_win)
+	local win_cols = vim.api.nvim_win_get_width(cur_win)
 
-	-- Position based on config
-	local col = config.position == "right" and vim.o.columns - width + config.offset.x or 0 + config.offset.x
+	local height = math.floor(win_lines * (config.height_percentage or 0.8))
+	local width = config.width
+	local row = math.floor((win_lines - height) / 2)
+
+	-- Position based on config (relative to current window)
+	local col
+	if config.position == "right" then
+		col = win_cols - width + config.offset.x
+	else
+		col = 0 + config.offset.x
+	end
 	row = row + config.offset.y -- Allow user to offset the centered position
 
 	-- Create buffer if needed
@@ -83,9 +93,10 @@ local function create_floating_window()
 		vim.bo[state.buf].filetype = "bufferposition"
 	end
 
-	-- Create window
+	-- Create window anchored to current window
 	local win_config = {
-		relative = "editor",
+		relative = "win",
+		win = cur_win,
 		width = width,
 		height = height,
 		col = col,
@@ -96,11 +107,12 @@ local function create_floating_window()
 		zindex = 10,
 	}
 
+	-- Recreate the floating window to ensure correct anchoring
 	if vim.api.nvim_win_is_valid(state.win) then
-		vim.api.nvim_win_set_config(state.win, win_config)
-	else
-		state.win = vim.api.nvim_open_win(state.buf, false, win_config)
+		pcall(vim.api.nvim_win_close, state.win, true)
+		state.win = -1
 	end
+	state.win = vim.api.nvim_open_win(state.buf, false, win_config)
 
 	-- Set transparency using winblend after window creation
 	if config.winblend then
