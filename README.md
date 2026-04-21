@@ -61,6 +61,7 @@ The plugin comes with the following default configuration. You can override any 
     show_delay = 1000,
     hide_delay = 1000, -- ms
     auto_hide = false,
+    ignore_filetypes = { "NvimTree", "help", "TelescopePrompt" },
     highlights = {
         active = { fg = "#ffffff" },
         inactive = { fg = "#505050" },
@@ -81,6 +82,7 @@ The plugin comes with the following default configuration. You can override any 
 -   `show_delay` (`number`): Delay in milliseconds after `CursorHold` before showing the indicator.
 -   `auto_hide` (`boolean`): If `true`, automatically hides the indicator after `hide_delay`. If `false`, it only hides on `CursorMoved`.
 -   `hide_delay` (`number`): Delay in milliseconds before hiding the indicator (only if `auto_hide` is `true`).
+-   `ignore_filetypes` (`table`): List of filetypes (strings) to ignore, e.g., { 'NvimTree', 'help' }.
 -   `highlights` (`table`): Configure the highlight groups for `active` and `inactive` states. You can set `fg`, `bg`, `bold`, `italic`, or `link` to an existing highlight group.
 
 ## Acknowledgements

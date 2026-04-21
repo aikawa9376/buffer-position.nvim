@@ -55,6 +55,8 @@ local config = {
 	show_delay = 1000,
 	hide_delay = 1000, -- ms
 	auto_hide = false,
+	-- List of filetypes to ignore (e.g. { "NvimTree", "help" })
+	ignore_filetypes = {},
 	highlights = {
 		active = { fg = "#ffffff" },
 		inactive = { fg = "#505050" },
@@ -199,6 +201,11 @@ end
 local function show()
 	local total_lines = vim.api.nvim_buf_line_count(0)
 	local window_height = vim.api.nvim_win_get_height(0)
+
+	-- Don't show for ignored filetypes
+	if config.ignore_filetypes and vim.tbl_contains(config.ignore_filetypes, vim.bo.filetype) then
+		return
+	end
 
 	-- Don't show for non-buflisted buffers or tiny buffers
 	-- Also, don't show if the entire buffer is visible
